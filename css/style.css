@@ -319,4 +319,9 @@ textarea.input{resize:vertical;min-height:64px;line-height:1.5}
 .due-line.ok{background:color-mix(in srgb,var(--acc) 12%,var(--surface));border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
 .due-line.ok .dl-h{color:var(--acc)}
 .seg.four{grid-template-columns:repeat(4,1fr)}
+.seg.two{grid-template-columns:repeat(2,1fr)}
 .be-every{flex:none;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 50%,var(--line))}
+/* 毎日・毎週・毎月 stays visible but dimmed until 定期 is chosen */
+.every-seg{transition:opacity .15s}
+.every-seg.off{opacity:.4}
+.every-seg.off button{cursor:not-allowed}

@@ -277,13 +277,25 @@ function btnBody(b){
   if (EVERY[b.every]) d.every = b.every;
   return d;
 }
-$("beEvery").addEventListener("click", e => { const x = e.target.closest("button[data-v]"); if (x){ beEvery = x.dataset.v; renderBtnEditor(); } });
+// なし / 定期, then 毎日・毎週・毎月 (定期 starts from the last interval picked, 毎月 at first)
+let lastEvery = "month";
+$("beRepeat").addEventListener("click", e => {
+  const x = e.target.closest("button[data-r]"); if (!x) return;
+  beEvery = x.dataset.r === "on" ? (beEvery || lastEvery) : "";
+  renderBtnEditor();
+});
+$("beEvery").addEventListener("click", e => {
+  const x = e.target.closest("button[data-v]"); if (!x || !beEvery) return;
+  beEvery = lastEvery = x.dataset.v; renderBtnEditor();
+});
 function resetBtnForm(){
   beEdit = null; beEvery = ""; $("beText").value = ""; $("beEmoji").value = EMOJIS.find(e => !S.buttons.some(b => b.emoji === e)) || "✅";
 }
 function startBtnEdit(b){
   beEdit = b.id; beEvery = b.every; $("beEmoji").value = b.emoji; $("beText").value = b.text;
-  renderBtnEditor(); updateCounters(); $("beText").focus({ preventScroll:true });
+  renderBtnEditor(); updateCounters();
+  // on a phone the form sits below the list: bring it into view (no keyboard; tap the text to change it)
+  $("beForm").scrollIntoView({ block:"center", behavior:"smooth" });
 }
 $("beCancel").addEventListener("click", () => { resetBtnForm(); renderBtnEditor(); updateCounters(); });
 $("beEmoji").addEventListener("input", () => renderBtnEditor());
@@ -300,7 +312,11 @@ $("beForm").addEventListener("submit", async e => {
     await withRetry(() => S.db.doc(`groups/${S.gid}/buttons/${id}`).set(data));
     toast(cur ? "ボタンを変えました" : `${emoji} ${text} を追加しました`);
     resetBtnForm();
-  } catch (err){ onWriteError(err); }
+  } catch (err){
+    // a refused button shouldn't lock the whole page (e.g. the Firebase rules are older than this page)
+    if (err && err.code === "invalid_argument") toast("ボタンを保存できませんでした。Firebaseのルールが最新か確認してください", true);
+    else onWriteError(err);
+  }
   renderBtnEditor(); updateCounters();
 });
 async function moveBtn(i){

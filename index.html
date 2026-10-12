@@ -182,8 +182,11 @@
         <input class="input" id="beText" maxlength="16" placeholder="例:荷物届いた" required autocomplete="off" enterkeyhint="done">
       </div>
       <span class="label">くり返し</span>
-      <div class="seg four" id="beEvery" role="radiogroup" aria-label="くり返し">
-        <button type="button" role="radio" data-v="">なし</button>
+      <div class="seg two" id="beRepeat" role="radiogroup" aria-label="くり返し">
+        <button type="button" role="radio" data-r="off">なし</button>
+        <button type="button" role="radio" data-r="on">定期</button>
+      </div>
+      <div class="seg three every-seg" id="beEvery" role="radiogroup" aria-label="定期の間隔">
         <button type="button" role="radio" data-v="day">毎日</button>
         <button type="button" role="radio" data-v="week">毎週</button>
         <button type="button" role="radio" data-v="month">毎月</button>
