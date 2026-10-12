@@ -227,7 +227,7 @@ function postItem(p){
         h("b", { text:nameOf(p.by) }),
         h("time", { datetime:new Date(p.at).toISOString(), title:new Date(p.at).toLocaleString("ja-JP"), text:clock(p.at) }),
         fresh ? h("span", { class:"new-tag", text:"NEW" }) : null,
-        mine && S.canWrite !== false ? h("button", { type:"button", class:"p-del" + (armed ? " armed" : ""), onclick:() => deletePost(p) }, armed ? "本当に消す" : "消す") : null,
+        mine && S.canWrite !== false ? h("button", { type:"button", class:"p-del" + (armed ? " armed" : ""), "aria-label": armed ? "もう一度押すと取り消します" : "この書き込みを取り消す", onclick:() => deletePost(p) }, armed ? "取り消す?" : "取り消す") : null,
         reactBtn),
       stamp ? h("div", { class:"p-stamp" }, p.emoji ? h("span", { class:"e", "aria-hidden":"true", text:p.emoji }) : null, h("span", { text:p.text }))
             : h("p", { class:"p-text" }, linkify(p.text))),

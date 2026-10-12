@@ -192,9 +192,9 @@ textarea.input{resize:vertical;min-height:64px;line-height:1.5}
   background:var(--surface);border:1.5px solid color-mix(in srgb,var(--acc) 55%,var(--line));font-weight:800;font-size:15px}
 .p-stamp .e{font-size:20px;line-height:1}
 .p-stamp span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.p-head .p-del{margin:-2px -4px 0 auto;align-self:center}
-.p-del{flex:none;border:0;background:none;color:var(--muted);font-size:12px;font-weight:700;padding:2px 4px;text-decoration:underline;text-underline-offset:3px}
-.p-del.armed{background:var(--danger);color:#fff;border-radius:999px;padding:2px 10px;text-decoration:none}
+.p-head .p-del{margin:-3px -4px -3px auto;align-self:center}
+.p-del{flex:none;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:12px;font-weight:800;line-height:1}
+.p-del.armed{background:var(--danger);border-color:var(--danger);color:#fff}
 .btn.more{width:100%;margin-top:10px;padding:10px;font-size:14px}
 
 /* icons */

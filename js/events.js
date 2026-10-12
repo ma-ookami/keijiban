@@ -147,6 +147,8 @@ const postPath = pid => `groups/${S.gid}/posts/${pid}`;
 const lastPress = {};
 function pressButton(b, el){
   if (S.canWrite === false) return;
+  // a repeating button that's already OK this period: a second press takes my press(es) back
+  if (doneThisPeriod(b)) return unpressButton(b, el);
   // a quick second tap is almost always a mistake
   if (lastPress[b.id] && Date.now() - lastPress[b.id] < 4000) return toast("さっき書いたばかりです");
   lastPress[b.id] = Date.now();
@@ -156,6 +158,32 @@ function pressButton(b, el){
   jumpTop = true;
   S.db.commit([[postPath(pid), post], [`groups/${S.gid}/latest/${b.id}`, { at, by:S.me, pid }]]).catch(onWriteError);
   toast(`${b.emoji} ${b.text} と書きました`, false, { label:"取り消す", fn:() => { lastPress[b.id] = 0; deletePost({ id:pid, ...post }, true); } });
+}
+// remove my presses of a repeating button in this period, so it goes back to "今月まだ".
+// Someone else's press can only be removed by them (the rules), so then it just says so.
+let unpressing = false;
+async function unpressButton(b, el){
+  if (unpressing) return;
+  const now = EVERY[b.every].now, from = periodStart(b.every), lt = S.latest[b.id];
+  if (lt && lt.by !== S.me) return toast(`${now}は${nameOf(lt.by)}が押しました。取り消せるのは${nameOf(lt.by)}だけです`);
+  unpressing = true;
+  try {
+    const snap = await withRetry(() => S.db.collection(`groups/${S.gid}/posts`).where("bid", "==", b.id).get());
+    const all = snap.docs.map(d => cleanPost(d.id, d.data())).filter(Boolean);
+    const mine = all.filter(p => p.by === S.me && p.at >= from);
+    if (!mine.length) return;
+    const gone = new Set(mine.map(p => p.id));
+    const rest = all.filter(p => !gone.has(p.id)).sort((x, y) => y.at - x.at);
+    bounce(el);
+    await withRetry(() => S.db.commit([...mine.map(p => [postPath(p.id), null]),
+      [`groups/${S.gid}/latest/${b.id}`, rest[0] ? { at:rest[0].at, by:rest[0].by, pid:rest[0].id } : null]]));
+    if (S.filterPosts) S.filterPosts = S.filterPosts.filter(p => !gone.has(p.id));
+    lastPress[b.id] = 0;
+    const still = rest[0] && rest[0].at >= from;
+    toast(still ? `取り消しました(${nameOf(rest[0].by)}の分で${now}OKのままです)` : `${b.emoji} ${now}OKを取り消しました`, false,
+      { label:"元に戻す", fn:() => { if (!doneThisPeriod(b)) pressButton(b, el); } });
+  } catch (err){ onWriteError(err); }
+  finally { unpressing = false; render(); }
 }
 $("btnGrid").addEventListener("click", e => {
   const el = e.target.closest(".kb"); if (!el) return;
@@ -195,7 +223,7 @@ async function latestOps(bids, skip){
   }
   return ops;
 }
-// two taps: the first arms 消す, the second (within 4 s) deletes. 取り消す deletes at once.
+// two taps: the first arms 取り消す, the second (within 4 s) deletes. The toast's 取り消す deletes at once.
 async function deletePost(p, now){
   if (!now && delArmed !== p.id){
     delArmed = p.id; clearTimeout(delTimer);
@@ -208,7 +236,7 @@ async function deletePost(p, now){
     const ops = [[postPath(p.id), null], ...(lt && lt.pid === p.id ? await latestOps([p.bid], x => x.id === p.id) : [])];
     if (S.filterPosts) S.filterPosts = S.filterPosts.filter(x => x.id !== p.id);
     await withRetry(() => S.db.commit(ops));
-    toast(now ? "取り消しました" : "消しました");
+    toast("取り消しました");
   } catch (err){ onWriteError(err); }
   render();
 }
