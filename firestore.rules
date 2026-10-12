@@ -5,6 +5,7 @@ rules_version = '2';
 // - メンバーの一覧は参加画面に必要なので、ボードのIDを知っている人が読める
 // - 書き込み・ボタン・既読は、メンバーだけが読める
 // - 書き込み・名前・既読は本人だけが書ける。書き込みの書き換えはできない(消して書き直す)
+// - 書き込みへの反応(👍など)は、ほかの人の書き込みに、1人1つ、自分の分だけ付け外しできる
 //   (別のスマホやブラウザからは、links/<そのブラウザのID> で「前に参加した人」として入れる。
 //    合言葉を設定しているメンバーに入るには、合言葉が必要)
 // - ボードの名前・ボタンはメンバーなら誰でも変えられる
@@ -64,6 +65,15 @@ service cloud.firestore {
         || (d.get('pin', '') is string && d.get('pin', '').matches('^[0-9]{4}$')
             && hashing.sha256((gid + ':' + mid + ':' + d.get('pin', '')).toUtf8()).toHexString().lower()
                == get(pinPath(gid, mid)).data.hash);
+    }
+
+    // the reaction emoji the app offers (REACTIONS in js/base.js)
+    function reactions() { return ['👍', '❤️', '🙏', '😂', '😮', '🎉']; }
+    // exactly one key changed, and it is the member this browser acts as
+    function myKeyOnly(gid, keys) {
+      return keys.size() == 1
+        && (keys.hasOnly([request.auth.uid])
+            || (hasLink(gid) && keys.hasOnly([get(linkPath(gid)).data.mid])));
     }
 
     // ---------- shapes ----------
@@ -166,6 +176,15 @@ service cloud.firestore {
         allow create: if isMember(gid)
           && validPost(request.resource.data)
           && actsAs(gid, request.resource.data.by);
+        // reactions (re: { member: emoji }): a member adds, changes or removes only their own,
+        // never on their own post, and only with the emoji the app offers
+        allow update: if isMember(gid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['re'])
+          && request.resource.data.re is map
+          && request.resource.data.re.size() <= 50
+          && request.resource.data.re.values().hasOnly(reactions())
+          && myKeyOnly(gid, request.resource.data.re.diff(resource.data.get('re', {})).affectedKeys())
+          && !request.resource.data.re.diff(resource.data.get('re', {})).affectedKeys().hasAny([resource.data.by]);
         allow delete: if actsAs(gid, resource.data.by) || isCreator(gid);
       }
 

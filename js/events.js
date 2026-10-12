@@ -211,6 +211,48 @@ async function deletePost(p, now){
   } catch (err){ onWriteError(err); }
   render();
 }
+// ---------- reactions ----------
+// a small row of emoji above the tapped button; one reaction per person, tap the same one again to take it back
+let reactFor = null;
+function openReactPicker(p, anchor){
+  if (S.canWrite === false || p.by === S.me) return;
+  const pop = $("reactPop"), cur = (p.re || {})[S.me];
+  reactFor = p.id;
+  pop.replaceChildren(...REACTIONS.map(e => h("button", { type:"button", class:"rp" + (cur === e ? " on" : ""), "aria-pressed":String(cur === e),
+    onclick:() => { closeReactPicker(); react(p, e); } }, e)));
+  pop.hidden = false;
+  const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, hh = pop.offsetHeight;
+  const left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w));
+  const top = r.top - hh - 8 > 8 ? r.top - hh - 8 : r.bottom + 8;
+  pop.style.left = left + "px"; pop.style.top = top + "px";
+  pop.querySelector(".rp").focus({ preventScroll:true });
+}
+function closeReactPicker(){ $("reactPop").hidden = true; reactFor = null; }
+document.addEventListener("pointerdown", e => { if (reactFor && !e.target.closest("#reactPop, .react-btn, .react-badge")) closeReactPicker(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && reactFor) closeReactPicker(); });
+$("postScroll").addEventListener("scroll", () => { if (reactFor) closeReactPicker(); }, { passive:true });
+window.addEventListener("resize", () => { if (reactFor) closeReactPicker(); });
+async function react(p, e){
+  if (S.canWrite === false || p.by === S.me) return;
+  const off = (p.re || {})[S.me] === e;
+  try {
+    // only my own key changes, so two people reacting at once don't overwrite each other
+    await withRetry(() => S.db.doc(postPath(p.id)).update({ ["re." + S.me]: off ? S.db.deleteField() : e }));
+    // the filtered list is fetched once, so keep it in step by hand
+    if (S.filterPosts) S.filterPosts = S.filterPosts.map(x => {
+      if (x.id !== p.id) return x;
+      const re = { ...x.re }; if (off) delete re[S.me]; else re[S.me] = e;
+      return { ...x, re };
+    });
+    render();
+  } catch (err){
+    // a refused reaction shouldn't lock the whole page (e.g. the new rules aren't published yet)
+    if (err && err.code === "invalid_argument")
+      return toast(S.posts.some(x => x.id === p.id) ? "反応を保存できませんでした。ページを再読み込みしてください" : "この書き込みは消されています", true);
+    onWriteError(err);
+  }
+}
+
 $("moreBtn").addEventListener("click", () => { $("moreBtn").disabled = true; loadMore(); setTimeout(() => { $("moreBtn").disabled = false; }, 600); });
 async function setFilter(v){
   if (S.filter === v) v = null;

@@ -38,7 +38,9 @@ function makeDb(fsdb){
     ops.forEach(([p, d]) => d === null ? batch.delete(fsdb.doc(p)) : batch.set(fsdb.doc(p), d));
     await rethrow(batch.commit());
   };
-  return { doc: p => docRef(fsdb.doc(p)), collection: p => colRef(fsdb.collection(p)), deleteMany, commit };
+  // in update(): removes that field
+  const deleteField = () => firebase.firestore.FieldValue.delete();
+  return { doc: p => docRef(fsdb.doc(p)), collection: p => colRef(fsdb.collection(p)), deleteMany, commit, deleteField };
 }
 
 // ---------- new-version check (GitHub Pages) ----------

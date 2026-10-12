@@ -12,6 +12,7 @@ const POST_MAX = 200, BTN_TEXT_MAX = 16;
 const DEFAULT_BUTTONS = [["📦","荷物届いた"],["🏠","帰ったよ"],["🚃","いまから帰る"],["🍚","ごはん食べた"],["💊","薬のんだ"],["😴","おやすみ"]];
 const EXTRA_BUTTONS = [["👍","了解"],["🛒","買い物した"],["🗑️","ゴミ出した"],["🐶","散歩した"],["💰","払っておいた"],["📮","郵便きてた"]];
 const EMOJIS = ["📦","🏠","🚃","🍚","💊","😴","👍","✅","🛒","🗑️","💰","📮","🐶","🐱","🌱","💡","🧺","🛁","🚗","🏥","📞","☔","⏰","🎂"];
+const REACTIONS = ["👍","❤️","🙏","😂","😮","🎉"];   // keep in step with reactions() in firestore.rules
 const DOW = ["日","月","火","水","木","金","土"];
 
 const S = {
@@ -92,7 +93,10 @@ function cleanPost(id, d){
   if (!d || typeof d.by !== "string" || !num(d.at)) return null;
   const text = str(d.text, POST_MAX);
   if (!text) return null;
-  return { id, by:str(d.by, 128), text, emoji:str(d.emoji, 16), bid:str(d.bid, 40), at:d.at };
+  // reactions: { member: emoji }, one each
+  const re = {};
+  if (d.re && typeof d.re === "object") for (const k in d.re) if (REACTIONS.includes(d.re[k])) re[k] = d.re[k];
+  return { id, by:str(d.by, 128), text, emoji:str(d.emoji, 16), bid:str(d.bid, 40), at:d.at, re };
 }
 function cleanButton(id, d){
   const text = d && str(d.text, BTN_TEXT_MAX).trim();

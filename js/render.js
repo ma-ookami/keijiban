@@ -206,7 +206,12 @@ function postItem(p){
     seen.length === others && others > 1 ? "みんな見た" : seen.length === 1 ? `${nameOf(seen[0])}が見た` : `${seen.length}人が見た`);
   else if (mine && others) seenNode = h("span", { class:"seen none", text:"まだだれも見ていません" });
   const armed = delArmed === p.id;
-  return h("li", { class:"post" + (stamp ? " stamp" : "") + (mine ? " mine" : "") + (fresh ? " new" : ""), "data-id":p.id },
+  // reactions: only on other people's posts, shown as a small badge on the bottom-right corner
+  const canReact = !mine && S.canWrite !== false;
+  const reactBtn = canReact ? h("button", { type:"button", class:"react-btn", "aria-label":"反応する", title:"反応する",
+    onclick:e => openReactPicker(p, e.currentTarget) }, h("span", { "aria-hidden":"true", text:"😊" }), "+") : null;
+  const badge = reactBadge(p, canReact);
+  return h("li", { class:"post" + (stamp ? " stamp" : "") + (mine ? " mine" : "") + (fresh ? " new" : "") + (badge ? " reacted" : ""), "data-id":p.id },
     avatar(p.by, nameOf(p.by)),
     h("div", { class:"p-body" },
       h("div", { class:"p-head" },
@@ -216,7 +221,20 @@ function postItem(p){
         mine && S.canWrite !== false ? h("button", { type:"button", class:"p-del" + (armed ? " armed" : ""), onclick:() => deletePost(p) }, armed ? "本当に消す" : "消す") : null),
       stamp ? h("div", { class:"p-stamp" }, p.emoji ? h("span", { class:"e", "aria-hidden":"true", text:p.emoji }) : null, h("span", { text:p.text }))
             : h("p", { class:"p-text" }, linkify(p.text)),
-      seenNode ? h("div", { class:"p-foot" }, seenNode) : null));
+      seenNode || reactBtn ? h("div", { class:"p-foot" }, seenNode || h("span"), reactBtn) : null),
+    badge);
+}
+// "👍2 ❤️" — grouped by emoji, mine highlighted; who reacted is in the title (and in a toast on tap)
+function reactBadge(p, canReact){
+  const ids = Object.keys(p.re || {}).filter(id => S.members[id]);
+  if (!ids.length) return null;
+  const by = {};
+  ids.forEach(id => (by[p.re[id]] = by[p.re[id]] || []).push(id));
+  const who = REACTIONS.filter(e => by[e]).map(e => `${e} ${by[e].map(nameOf).join("・")}`).join("  ");
+  return h("button", { type:"button", class:"react-badge", title:who, "aria-label":"反応:" + who,
+      onclick:e => canReact ? openReactPicker(p, e.currentTarget) : toast(who) },
+    REACTIONS.filter(e => by[e]).map(e => h("span", { class:"rb" + (by[e].includes(S.me) ? " mine" : "") },
+      h("span", { class:"rb-e", text:e }), by[e].length > 1 ? h("b", { text:by[e].length }) : null)));
 }
 // web addresses become links; everything else stays plain text
 function linkify(text){
