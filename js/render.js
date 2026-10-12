@@ -98,18 +98,31 @@ function renderMain(){
   grid.classList.toggle("ro", ro);
   const old = {};
   grid.querySelectorAll(".kb").forEach(el => { old[el.dataset.bid] = el; });
+  // a repeating button shows this period's state: "✓ 今月OK・10/3 ママ" (green) or "今月まだ" (dashed)
   const tiles = S.buttons.map(b => {
     const last = S.latest[b.id], today = !!last && dayKey(last.at) === dayKey(Date.now());
+    const done = doneThisPeriod(b), due = !!b.every && !done;
     const el = old[b.id] || h("button", { type:"button", class:"kb", "data-bid":b.id },
-      h("span", { class:"kb-e", "aria-hidden":"true" }), h("span", { class:"kb-t" }), h("span", { class:"kb-l" }));
-    el.classList.toggle("today", today);
+      h("span", { class:"kb-e", "aria-hidden":"true" }), h("span", { class:"kb-t" }), h("span", { class:"kb-l" }), h("span", { class:"kb-every" }));
+    el.classList.toggle("today", b.every ? done : today);
+    el.classList.toggle("due", due);
     el.disabled = ro;
-    el.setAttribute("aria-label", `${b.text}と書く` + (last ? `(前回:${whenText(last.at)} ${nameOf(last.by)})` : ""));
-    const [e, t, l] = el.children;
-    e.textContent = b.emoji || "・"; t.textContent = b.text;
-    l.textContent = last ? `${whenText(last.at)}・${nameOf(last.by)}` : "まだなし";
+    const lastText = last ? `${whenText(last.at)}・${nameOf(last.by)}` : "まだなし";
+    const state = !b.every ? lastText : done ? `✓ ${EVERY[b.every].now}OK・${shortWhen(last.at)} ${nameOf(last.by)}` : `${EVERY[b.every].now}まだ`;
+    el.setAttribute("aria-label", `${b.text}と書く(${b.every ? EVERY[b.every].label + "・" + state : "前回:" + lastText})`);
+    el.title = b.every && last ? `前回:${whenText(last.at)} ${nameOf(last.by)}` : "";
+    const [e, t, l, ev] = el.children;
+    e.textContent = b.emoji || "・"; t.textContent = b.text; l.textContent = state;
+    ev.textContent = b.every ? EVERY[b.every].label : ""; ev.hidden = !b.every;
     return el;
   });
+  // the repeating ones, summed up: what hasn't come yet this period
+  const reps = S.buttons.filter(b => b.every), pending = reps.filter(b => !doneThisPeriod(b));
+  $("dueLine").hidden = !reps.length;
+  $("dueLine").classList.toggle("ok", !pending.length);
+  $("dueLine").replaceChildren(...(pending.length
+    ? [h("span", { class:"dl-h", text:"まだの連絡" }), ...pending.map(b => h("span", { class:"dl-i" }, `${EVERY[b.every].now} ${b.emoji} ${b.text}`))]
+    : [h("span", { class:"dl-h", text:"✓ 定期の連絡はぜんぶOK" }), h("span", { class:"dl-i muted", text:reps.map(b => b.emoji || b.text).join(" ") })]));
   if (!tiles.length) tiles.push(h("p", { class:"hint empty-kb", text:"ボタンがありません。「✎ ボタンを編集」から追加できます" }));
   const cur = [...grid.children];
   if (cur.length !== tiles.length || cur.some((n, i) => n !== tiles[i])) grid.replaceChildren(...tiles);
@@ -303,18 +316,23 @@ function renderColorPick(){
 }
 
 // button editor: tap a row to change it, ↑ to move it up, 消す (twice) to remove it
-let beEdit = null, beRmArmed = null, beRmTimer = null;
+let beEdit = null, beEvery = "", beRmArmed = null, beRmTimer = null;
 function renderBtnEditor(){
   const ro = S.canWrite === false;
   if (beEdit && !S.buttons.some(b => b.id === beEdit)) beEdit = null;
   $("beList").replaceChildren(...S.buttons.map((b, i) => h("li", { class: beEdit === b.id ? "on" : "" },
     h("button", { type:"button", class:"be-main", onclick:() => startBtnEdit(b) },
-      h("span", { class:"e", "aria-hidden":"true", text:b.emoji || "・" }), h("span", { class:"t", text:b.text }), h("span", { class:"pen", text:"✎" })),
+      h("span", { class:"e", "aria-hidden":"true", text:b.emoji || "・" }), h("span", { class:"t", text:b.text }),
+      b.every ? h("span", { class:"be-every", text:EVERY[b.every].label }) : null, h("span", { class:"pen", text:"✎" })),
     h("button", { type:"button", class:"be-up", "aria-label":`${b.text}を上へ`, disabled: i === 0 || ro, onclick:() => moveBtn(i) }, "↑"),
     h("button", { type:"button", class:"be-rm" + (beRmArmed === b.id ? " armed" : ""), disabled:ro, onclick:() => removeBtn(b) }, beRmArmed === b.id ? "本当に消す" : "消す"))));
   const cur = $("beEmoji").value.trim();
   $("beEmojis").replaceChildren(...EMOJIS.map(e => h("button", { type:"button", role:"radio", class:"em" + (cur === e ? " on" : ""), "aria-checked":String(cur === e),
     onclick:() => { $("beEmoji").value = e; renderBtnEditor(); } }, e)));
+  $("beEvery").querySelectorAll("button").forEach(x => { const on = x.dataset.v === beEvery; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); });
+  $("beEveryHint").textContent = beEvery
+    ? `${EVERY[beEvery].now}押されたかどうかが、ボタンに「✓ ${EVERY[beEvery].now}OK」「${EVERY[beEvery].now}まだ」で出ます。` + (beEvery === "week" ? "週は月曜はじまりです。" : "")
+    : "いつ押してもよいボタンです。最後に押した日時が出ます。";
   $("beFormTitle").textContent = beEdit ? "ボタンを変える" : "ボタンを追加";
   $("beSave").textContent = beEdit ? "保存" : "追加";
   $("beCancel").hidden = !beEdit;

@@ -9,6 +9,7 @@ rules_version = '2';
 //   (別のスマホやブラウザからは、links/<そのブラウザのID> で「前に参加した人」として入れる。
 //    合言葉を設定しているメンバーに入るには、合言葉が必要)
 // - ボードの名前・ボタンはメンバーなら誰でも変えられる
+// - ボタンは「くり返し」(毎日・毎週・毎月)を持てる
 // - ボタンの「最後に押された」(latest)は、実在する書き込みと中身が一致するときだけ書ける
 // - メンバーを外す・ボードを削除するのは、ボードを作った端末(ブラウザ)だけ。
 //   作った人が合言葉を設定していれば、合言葉で入り直した別の端末からもできる
@@ -89,7 +90,8 @@ service cloud.firestore {
         && d.get('hasPin', false) is bool;
     }
     function validButton(d) {
-      return d.keys().hasOnly(['emoji', 'text', 'order', 'at'])
+      return d.keys().hasOnly(['emoji', 'text', 'order', 'at', 'every'])
+        && d.get('every', 'day') in ['day', 'week', 'month']
         && isText(d.emoji, 0, 32)
         && isText(d.text, 1, 32)
         && intIn(d.order, 0, 999)

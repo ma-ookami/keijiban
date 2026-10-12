@@ -55,6 +55,20 @@ function agoText(t){
   if (d < 45) return `${d}日前`;
   return `${Math.floor(d / 30)}か月前`;
 }
+// buttons that should be pressed once a day / week / month (keep in step with validButton in firestore.rules)
+const EVERY = { day:{ label:"毎日", now:"今日" }, week:{ label:"毎週", now:"今週" }, month:{ label:"毎月", now:"今月" } };
+// when the current day / week (from Monday) / month began, by the phone's clock
+function periodStart(every, now = Date.now()){
+  const d = new Date(now); d.setHours(0, 0, 0, 0);
+  if (every === "week") d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+  if (every === "month") d.setDate(1);
+  return d.getTime();
+}
+// a repeating button: pressed in this period already?
+const doneThisPeriod = b => !!b.every && !!S.latest[b.id] && S.latest[b.id].at >= periodStart(b.every);
+// "14:03" today, "10/3" otherwise
+const shortWhen = t => dayKey(t) === dayKey(Date.now()) ? clock(t) : `${new Date(t).getMonth() + 1}/${new Date(t).getDate()}`;
+
 // "14:03" today, "昨日 14:03", otherwise "3日前"
 function whenText(t){
   if (dayKey(t) === dayKey(Date.now())) return "今日 " + clock(t);
@@ -101,7 +115,7 @@ function cleanPost(id, d){
 function cleanButton(id, d){
   const text = d && str(d.text, BTN_TEXT_MAX).trim();
   if (!text) return null;
-  return { id, emoji:str(d.emoji, 16), text, order:clamp(d.order, 0, 999, 0), at:num(d.at) || 0 };
+  return { id, emoji:str(d.emoji, 16), text, order:clamp(d.order, 0, 999, 0), at:num(d.at) || 0, every:EVERY[d.every] ? d.every : "" };
 }
 
 // ---------- toast (with an optional action, e.g. 取り消す) ----------

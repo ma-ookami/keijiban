@@ -114,6 +114,7 @@
       <div class="col col-send">
         <div class="card kb-card">
           <div class="mhead"><h2>ボタンで伝える</h2><button type="button" class="mini" id="editBtns">✎ ボタンを編集</button></div>
+          <div class="due-line" id="dueLine" role="status" hidden></div>
           <div class="kb-grid" id="btnGrid"></div>
         </div>
         <form class="card composer" id="postForm">
@@ -180,6 +181,14 @@
         <input class="input be-emoji" id="beEmoji" maxlength="8" aria-label="絵文字(ほかの絵文字も入れられます)" autocomplete="off">
         <input class="input" id="beText" maxlength="16" placeholder="例:荷物届いた" required autocomplete="off" enterkeyhint="done">
       </div>
+      <span class="label">くり返し</span>
+      <div class="seg four" id="beEvery" role="radiogroup" aria-label="くり返し">
+        <button type="button" role="radio" data-v="">なし</button>
+        <button type="button" role="radio" data-v="day">毎日</button>
+        <button type="button" role="radio" data-v="week">毎週</button>
+        <button type="button" role="radio" data-v="month">毎月</button>
+      </div>
+      <p class="hint" id="beEveryHint"></p>
       <div class="be-actions"><button type="button" class="linkbtn" id="beCancel" hidden>やめる</button><button class="btn primary" id="beSave">追加</button></div>
     </form>
     <p class="hint" id="beHint"></p>

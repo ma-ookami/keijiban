@@ -305,3 +305,18 @@ textarea.input{resize:vertical;min-height:64px;line-height:1.5}
 .rp:hover,.rp:focus-visible{transform:scale(1.18)}
 .rp.on{background:color-mix(in srgb,var(--acc) 30%,var(--surface))}
 @keyframes popin{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
+
+/* repeating buttons (毎日・毎週・毎月) */
+.kb-every{position:absolute;top:5px;left:6px;font-size:9.5px;font-weight:800;line-height:1;padding:3px 5px;border-radius:999px;background:var(--surface);color:var(--muted);border:1px solid var(--line)}
+.kb.due{border-style:dashed;border-color:color-mix(in srgb,var(--pin) 70%,var(--line));box-shadow:0 4px 0 color-mix(in srgb,var(--pin) 25%,var(--line))}
+.kb.due .kb-l{color:var(--pin);font-weight:800}
+.kb.due .kb-every{color:var(--pin);border-color:color-mix(in srgb,var(--pin) 50%,var(--line))}
+.kb.today .kb-every{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 50%,var(--line))}
+.due-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:-2px 0 12px;padding:8px 12px;border-radius:12px;font-size:13px;font-weight:700;
+  background:color-mix(in srgb,var(--pin) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--pin) 45%,var(--line))}
+.due-line .dl-h{color:var(--pin);font-weight:800}
+.due-line .dl-i{white-space:nowrap}
+.due-line.ok{background:color-mix(in srgb,var(--acc) 12%,var(--surface));border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.due-line.ok .dl-h{color:var(--acc)}
+.seg.four{grid-template-columns:repeat(4,1fr)}
+.be-every{flex:none;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 50%,var(--line))}

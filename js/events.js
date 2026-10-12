@@ -271,11 +271,18 @@ async function setFilter(v){
 }
 
 // ---------- buttons (editor in settings) ----------
+// what a button document holds ("every" only when it repeats)
+function btnBody(b){
+  const d = { emoji:b.emoji, text:b.text, order:b.order, at:b.at };
+  if (EVERY[b.every]) d.every = b.every;
+  return d;
+}
+$("beEvery").addEventListener("click", e => { const x = e.target.closest("button[data-v]"); if (x){ beEvery = x.dataset.v; renderBtnEditor(); } });
 function resetBtnForm(){
-  beEdit = null; $("beText").value = ""; $("beEmoji").value = EMOJIS.find(e => !S.buttons.some(b => b.emoji === e)) || "✅";
+  beEdit = null; beEvery = ""; $("beText").value = ""; $("beEmoji").value = EMOJIS.find(e => !S.buttons.some(b => b.emoji === e)) || "✅";
 }
 function startBtnEdit(b){
-  beEdit = b.id; $("beEmoji").value = b.emoji; $("beText").value = b.text;
+  beEdit = b.id; beEvery = b.every; $("beEmoji").value = b.emoji; $("beText").value = b.text;
   renderBtnEditor(); updateCounters(); $("beText").focus({ preventScroll:true });
 }
 $("beCancel").addEventListener("click", () => { resetBtnForm(); renderBtnEditor(); updateCounters(); });
@@ -287,7 +294,7 @@ $("beForm").addEventListener("submit", async e => {
   const cur = beEdit && S.buttons.find(b => b.id === beEdit);
   if (!cur && S.buttons.length >= MAX_BUTTONS) return toast(`ボタンは${MAX_BUTTONS}個までです`, true);
   const id = cur ? cur.id : newId("b");
-  const data = cur ? { emoji, text, order:cur.order, at:cur.at } : { emoji, text, order:S.buttons.reduce((m, b) => Math.max(m, b.order + 1), 0), at:Date.now() };
+  const data = btnBody({ emoji, text, every:beEvery, ...(cur ? { order:cur.order, at:cur.at } : { order:S.buttons.reduce((m, b) => Math.max(m, b.order + 1), 0), at:Date.now() }) });
   $("beSave").disabled = true;
   try {
     await withRetry(() => S.db.doc(`groups/${S.gid}/buttons/${id}`).set(data));
@@ -299,7 +306,7 @@ $("beForm").addEventListener("submit", async e => {
 async function moveBtn(i){
   const list = [...S.buttons];
   [list[i - 1], list[i]] = [list[i], list[i - 1]];
-  const ops = list.map((b, k) => b.order === k ? null : [`groups/${S.gid}/buttons/${b.id}`, { emoji:b.emoji, text:b.text, order:k, at:b.at }]).filter(Boolean);
+  const ops = list.map((b, k) => b.order === k ? null : [`groups/${S.gid}/buttons/${b.id}`, btnBody({ ...b, order:k })]).filter(Boolean);
   S.buttons = list.map((b, k) => ({ ...b, order:k })); render();
   try { await withRetry(() => S.db.commit(ops)); } catch (err){ onWriteError(err); }
 }
