@@ -217,12 +217,12 @@ $("toNewest").addEventListener("click", () => scrollToNewest(true));
 function postItem(p){
   const mine = p.by === S.me, stamp = !!p.bid || !!p.emoji, fresh = isNew(p);
   const armed = delArmed === p.id;
-  // reactions: only on other people's posts, shown as a small badge on the bottom-right corner
+  // reactions: only on other people's posts, shown inside the post at the bottom, with who sent them
   const canReact = !mine && S.canWrite !== false;
   const reactBtn = canReact ? h("button", { type:"button", class:"react-btn", "aria-label":"反応する", title:"反応する",
     onclick:e => openReactPicker(p, e.currentTarget) }, h("span", { "aria-hidden":"true", text:"😊" }), "+") : null;
-  const badge = reactBadge(p, canReact);
-  return h("li", { class:"post" + (stamp ? " stamp" : "") + (mine ? " mine" : "") + (fresh ? " new" : "") + (badge ? " reacted" : ""), "data-id":p.id },
+  const reacts = reactRow(p, canReact);
+  return h("li", { class:"post" + (stamp ? " stamp" : "") + (mine ? " mine" : "") + (fresh ? " new" : ""), "data-id":p.id },
     avatar(p.by, nameOf(p.by)),
     h("div", { class:"p-body" },
       h("div", { class:"p-head" },
@@ -232,20 +232,25 @@ function postItem(p){
         mine && S.canWrite !== false ? h("button", { type:"button", class:"p-del" + (armed ? " armed" : ""), "aria-label": armed ? "もう一度押すと取り消します" : "この書き込みを取り消す", onclick:() => deletePost(p) }, armed ? "取り消す?" : "取り消す") : null,
         reactBtn),
       stamp ? h("div", { class:"p-stamp" }, p.emoji ? h("span", { class:"e", "aria-hidden":"true", text:p.emoji }) : null, h("span", { text:p.text }))
-            : h("p", { class:"p-text" }, linkify(p.text))),
-    badge);
+            : h("p", { class:"p-text" }, linkify(p.text)),
+      reacts));
 }
-// "👍2 ❤️" — grouped by emoji, mine highlighted; who reacted is in the title (and in a toast on tap)
-function reactBadge(p, canReact){
+// "❤️ ばあば・パパ  👍 ママ" — one chip per emoji with who sent it (3 names, then +n); mine outlined.
+// On someone else's post a chip opens the picker to change mine.
+function reactRow(p, canReact){
   const ids = Object.keys(p.re || {}).filter(id => S.members[id]);
   if (!ids.length) return null;
   const by = {};
   ids.forEach(id => (by[p.re[id]] = by[p.re[id]] || []).push(id));
-  const who = REACTIONS.filter(e => by[e]).map(e => `${e} ${by[e].map(nameOf).join("・")}`).join("  ");
-  return h("button", { type:"button", class:"react-badge", title:who, "aria-label":"反応:" + who,
-      onclick:e => canReact ? openReactPicker(p, e.currentTarget) : toast(who) },
-    REACTIONS.filter(e => by[e]).map(e => h("span", { class:"rb" + (by[e].includes(S.me) ? " mine" : "") },
-      h("span", { class:"rb-e", text:e }), by[e].length > 1 ? h("b", { text:by[e].length }) : null)));
+  return h("div", { class:"reacts" }, REACTIONS.filter(e => by[e]).map(e => {
+    const names = by[e].sort((a, b) => S.members[a].joinedAt - S.members[b].joinedAt).map(nameOf);
+    const shown = names.slice(0, 3).join("・") + (names.length > 3 ? ` +${names.length - 3}` : "");
+    const kids = [h("span", { class:"rb-e", "aria-hidden":"true", text:e }), h("span", { class:"rb-n", text:shown })];
+    const cls = "rb" + (by[e].includes(S.me) ? " mine" : "");
+    const label = `${e} ${names.join("・")}`;
+    return canReact ? h("button", { type:"button", class:cls, title:label, "aria-label":"反応 " + label, onclick:ev => openReactPicker(p, ev.currentTarget) }, kids)
+                    : h("span", { class:cls, title:label }, kids);
+  }));
 }
 // web addresses become links; everything else stays plain text
 function linkify(text){

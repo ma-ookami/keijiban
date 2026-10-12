@@ -257,7 +257,7 @@ function openReactPicker(p, anchor){
   pop.querySelector(".rp").focus({ preventScroll:true });
 }
 function closeReactPicker(){ $("reactPop").hidden = true; reactFor = null; }
-document.addEventListener("pointerdown", e => { if (reactFor && !e.target.closest("#reactPop, .react-btn, .react-badge")) closeReactPicker(); });
+document.addEventListener("pointerdown", e => { if (reactFor && !e.target.closest("#reactPop, .react-btn, .reacts")) closeReactPicker(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && reactFor) closeReactPicker(); });
 $("postScroll").addEventListener("scroll", () => { if (reactFor) closeReactPicker(); }, { passive:true });
 window.addEventListener("resize", () => { if (reactFor) closeReactPicker(); });
