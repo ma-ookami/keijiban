@@ -103,17 +103,19 @@ function renderMain(){
     const last = S.latest[b.id];
     const done = doneThisPeriod(b), due = !!b.every && !done;
     const el = old[b.id] || h("button", { type:"button", class:"kb", "data-bid":b.id },
-      h("span", { class:"kb-e", "aria-hidden":"true" }), h("span", { class:"kb-t" }), h("span", { class:"kb-l" }), h("span", { class:"kb-every" }));
+      h("span", { class:"kb-e", "aria-hidden":"true" }), h("span", { class:"kb-t" }), h("span", { class:"kb-l" }), h("span", { class:"kb-every" }), h("span", { class:"av kb-who", "aria-hidden":"true" }));
     // plain buttons just show emoji + text (who pressed when is on the board);
-    // repeating ones also show this period's state: ✓ 今月OK (green) / 今月まだ (dashed)
+    // repeating ones also show this period's state: 今月OK・パパ (green, with that person's icon on the corner) / 今月まだ (dashed)
     el.classList.toggle("today", done);
     el.classList.toggle("due", due);
     el.disabled = ro;
     const lastText = last ? `${whenText(last.at)}・${nameOf(last.by)}` : "まだなし";
-    const state = !b.every ? "" : `${EVERY[b.every].now}${done ? "OK" : "まだ"}`;
+    const state = !b.every ? "" : done ? `${EVERY[b.every].now}OK・${nameOf(last.by)}` : `${EVERY[b.every].now}まだ`;
     el.setAttribute("aria-label", `${b.text}と書く` + (b.every ? `(${EVERY[b.every].label}・${state})` : ""));
     el.title = last ? `前回:${lastText}` : "";
-    const [e, t, l, ev] = el.children;
+    const [e, t, l, ev, who] = el.children;
+    who.hidden = !done;
+    if (done){ who.setAttribute("style", avStyle(colorIndex(last.by))); who.textContent = [...nameOf(last.by)][0]; }
     e.textContent = b.emoji || "・"; t.textContent = b.text; l.textContent = state; l.hidden = !state;
     ev.textContent = b.every ? EVERY[b.every].label : ""; ev.hidden = !b.every;
     return el;
