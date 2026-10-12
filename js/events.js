@@ -153,6 +153,7 @@ function pressButton(b, el){
   const pid = newId("p"), at = Date.now();
   const post = { by:S.me, text:b.text, emoji:b.emoji, bid:b.id, at };
   bounce(el);
+  jumpTop = true;
   S.db.commit([[postPath(pid), post], [`groups/${S.gid}/latest/${b.id}`, { at, by:S.me, pid }]]).catch(onWriteError);
   toast(`${b.emoji} ${b.text} と書きました`, false, { label:"取り消す", fn:() => { lastPress[b.id] = 0; deletePost({ id:pid, ...post }, true); } });
 }
@@ -179,6 +180,7 @@ $("postForm").addEventListener("submit", e => {
   if (!text || S.canWrite === false) return;
   const pid = newId("p"), post = { by:S.me, text, emoji:"", bid:"", at:Date.now() };
   $("postInput").value = ""; updateComposer();
+  jumpTop = true;
   S.db.commit([[postPath(pid), post]]).catch(err => { onWriteError(err); if (!$("postInput").value) $("postInput").value = text; updateComposer(); });
   toast("書きました", false, { label:"取り消す", fn:() => deletePost({ id:pid, ...post }, true) });
 });
@@ -212,12 +214,13 @@ async function deletePost(p, now){
 $("moreBtn").addEventListener("click", () => { $("moreBtn").disabled = true; loadMore(); setTimeout(() => { $("moreBtn").disabled = false; }, 600); });
 async function setFilter(v){
   if (S.filter === v) v = null;
-  S.filter = v; S.filterPosts = null; render();
+  S.filter = v; S.filterPosts = null; jumpTop = true; render();
   if (v == null) return;
   try {
     const snap = await withRetry(() => S.db.collection(`groups/${S.gid}/posts`).where("bid", "==", v).limit(500).get());
     if (S.filter !== v) return;
     S.filterPosts = snap.docs.map(d => cleanPost(d.id, d.data())).filter(Boolean);
+    jumpTop = true;
   } catch {
     if (S.filter !== v) return;
     S.filterPosts = []; toast("読み込めませんでした。通信を確認してください", true);

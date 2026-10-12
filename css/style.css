@@ -154,9 +154,24 @@ textarea.input{resize:vertical;min-height:64px;line-height:1.5}
 .filter::-webkit-scrollbar{display:none}
 .fchip{flex:none;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;height:32px;min-width:40px;padding:0 11px;font-size:14px;font-weight:800;color:var(--muted)}
 .fchip.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+/* the board scrolls inside the card, newest on top */
+.mh-l{display:flex;align-items:center;gap:8px;min-width:0}
+.order-tag{flex:none;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;color:var(--acc);border:1.5px solid color-mix(in srgb,var(--acc) 60%,var(--line));white-space:nowrap}
+.posts-wrap{position:relative}
+.posts-scroll{position:relative;max-height:min(64vh,720px);max-height:min(64dvh,720px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent;border-radius:14px;padding:0 2px 14px 0}
+.posts-scroll:focus-visible{outline-offset:-2px}
+@media (min-width:880px){ .posts-scroll{max-height:calc(100vh - 250px);max-height:calc(100dvh - 250px)} }
+/* a soft fade at the bottom edge says "more below" */
+.posts-wrap::after{content:"";position:absolute;left:0;right:6px;bottom:0;height:28px;pointer-events:none;border-radius:0 0 14px 14px;background:linear-gradient(transparent,var(--surface))}
+.newest-cap{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 6px;padding:4px 0;font-size:11.5px;font-weight:800;color:var(--acc);letter-spacing:.04em}
+.end-cap{margin:12px 0 4px;text-align:center;font-size:12px;font-weight:700;color:var(--muted)}
+.to-new{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:3;border:1px solid var(--line);border-radius:999px;padding:6px 14px;
+  background:var(--fg);color:var(--bg);font-size:13px;font-weight:800;box-shadow:0 4px 14px color-mix(in srgb,#000 30%,transparent);white-space:nowrap;animation:fade .2s}
+.to-new.fresh{background:var(--pin);color:var(--pin-ink);border-color:var(--pin)}
 .posts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .posts .empty{padding:18px 8px;text-align:center;font-size:14px}
-.day-sep{display:flex;align-items:center;gap:10px;margin:8px 4px 0;font-size:12px;font-weight:800;color:var(--muted)}
+.day-sep{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;margin:8px 0 0;padding:3px 4px;font-size:12px;font-weight:800;color:var(--muted);background:var(--surface)}
 .day-sep::before,.day-sep::after{content:"";flex:1;height:1px;background:var(--line)}
 .day-sep:first-child{margin-top:0}
 .post{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:var(--surface-2);border:1px solid transparent}

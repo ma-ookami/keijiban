@@ -1,0 +1,206 @@
+rules_version = '2';
+
+// ケージバン のデータを守るルール。
+// - ボードは「IDを知っている人(匿名ログイン済み)」だけが1件ずつ読める。一覧での取り出しは禁止
+// - メンバーの一覧は参加画面に必要なので、ボードのIDを知っている人が読める
+// - 書き込み・ボタン・既読は、メンバーだけが読める
+// - 書き込み・名前・既読は本人だけが書ける。書き込みの書き換えはできない(消して書き直す)
+//   (別のスマホやブラウザからは、links/<そのブラウザのID> で「前に参加した人」として入れる。
+//    合言葉を設定しているメンバーに入るには、合言葉が必要)
+// - ボードの名前・ボタンはメンバーなら誰でも変えられる
+// - ボタンの「最後に押された」(latest)は、実在する書き込みと中身が一致するときだけ書ける
+// - メンバーを外す・ボードを削除するのは、ボードを作った端末(ブラウザ)だけ。
+//   作った人が合言葉を設定していれば、合言葉で入り直した別の端末からもできる
+// - 参加中ボードの一覧(users/<uid>)は本人だけ。ボードを作れるのは1ブラウザ3つまで
+// - 保存できる項目と長さは、アプリが使うものだけに制限する
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+    function nowMs() { return request.time.toMillis(); }
+    function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function groupPath(gid) { return /databases/$(database)/documents/groups/$(gid); }
+    function memberPath(gid, mid) { return /databases/$(database)/documents/groups/$(gid)/members/$(mid); }
+    function pinPath(gid, mid) { return /databases/$(database)/documents/groups/$(gid)/pins/$(mid); }
+    function postPath(gid, pid) { return /databases/$(database)/documents/groups/$(gid)/posts/$(pid); }
+    function linkPath(gid) { return /databases/$(database)/documents/groups/$(gid)/links/$(request.auth.uid); }
+    function hasLink(gid) { return exists(linkPath(gid)); }
+    // this browser acts as member <mid>: it joined as that member, or linked itself to it
+    function actsAs(gid, mid) {
+      return signedIn() && (mid == request.auth.uid || (hasLink(gid) && get(linkPath(gid)).data.mid == mid));
+    }
+    function isMember(gid) {
+      return signedIn() && (exists(memberPath(gid, request.auth.uid)) || hasLink(gid));
+    }
+    // a member once this write (or batch) is done: used when a board is created together with its first buttons
+    function memberAfter(gid) {
+      return signedIn() && existsAfter(memberPath(gid, request.auth.uid));
+    }
+    // the creator: the browser that created the board, or a browser that re-entered as the creator
+    // with the creator's passcode (only while that passcode is still set)
+    function isCreatorUid(gid, c) {
+      return signedIn() && c != ''
+        && (c == request.auth.uid
+            || (hasLink(gid) && get(linkPath(gid)).data.mid == c
+                && get(linkPath(gid)).data.get('verified', false) == true
+                && exists(pinPath(gid, c))));
+    }
+    function isCreator(gid) { return isCreatorUid(gid, get(groupPath(gid)).data.get('createdBy', '')); }
+    function isText(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function intIn(v, lo, hi) { return v is int && v >= lo && v <= hi; }
+    // a time the phone stamped: not in the future, and not older than 3 days (writes made offline arrive later)
+    function recentMs(v) { return v is int && v <= nowMs() + 300000 && v >= nowMs() - 259200000; }
+    // a passcode was sent and it matches (the member must have one set)
+    function pinGiven(gid, mid, d) {
+      return exists(pinPath(gid, mid))
+        && d.get('pin', '') is string && d.get('pin', '').matches('^[0-9]{4}$')
+        && hashing.sha256((gid + ':' + mid + ':' + d.get('pin', '')).toUtf8()).toHexString().lower()
+           == get(pinPath(gid, mid)).data.hash;
+    }
+    // claiming a member with a passcode: sha256("<gid>:<mid>:<pin>") must match the stored hash
+    function pinOk(gid, mid, d) {
+      return !exists(pinPath(gid, mid))
+        || (d.get('pin', '') is string && d.get('pin', '').matches('^[0-9]{4}$')
+            && hashing.sha256((gid + ':' + mid + ':' + d.get('pin', '')).toUtf8()).toHexString().lower()
+               == get(pinPath(gid, mid)).data.hash);
+    }
+
+    // ---------- shapes ----------
+    function validGroup(d) {
+      return d.keys().hasOnly(['name', 'createdBy', 'createdAt'])
+        && isText(d.name, 1, 24);
+    }
+    function validMember(d) {
+      return d.keys().hasOnly(['name', 'joinedAt', 'color', 'hasPin'])
+        && isText(d.name, 1, 16)
+        && d.joinedAt is int
+        && (!('color' in d) || intIn(d.color, 0, 15))
+        && d.get('hasPin', false) is bool;
+    }
+    function validButton(d) {
+      return d.keys().hasOnly(['emoji', 'text', 'order', 'at'])
+        && isText(d.emoji, 0, 32)
+        && isText(d.text, 1, 32)
+        && intIn(d.order, 0, 999)
+        && d.at is int;
+    }
+    function validPost(d) {
+      return d.keys().hasOnly(['by', 'text', 'emoji', 'bid', 'at'])
+        && isText(d.by, 1, 128)
+        && isText(d.text, 1, 400)
+        && isText(d.emoji, 0, 32)
+        && isText(d.bid, 0, 40)
+        && recentMs(d.at);
+    }
+
+    match /groups/{gid} {
+      allow get: if signedIn();
+      allow list: if false;
+      // creating a board also lists it under the creator's "owned" (at most 3), in the same batch
+      allow create: if signedIn() && validGroup(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt is int
+        && getAfter(userPath()).data.get('owned', []).hasAny([gid])
+        && getAfter(userPath()).data.get('owned', []).size() <= 3;
+      allow update: if isMember(gid) && validGroup(request.resource.data)
+        && request.resource.data.get('createdBy', '') == resource.data.get('createdBy', '')
+        && request.resource.data.get('createdAt', 0) == resource.data.get('createdAt', 0);
+      allow delete: if isCreatorUid(gid, resource.data.get('createdBy', ''));
+
+      match /members/{mid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.auth.uid == mid
+          && existsAfter(groupPath(gid))
+          && validMember(request.resource.data);
+        allow update: if actsAs(gid, mid) && validMember(request.resource.data);
+        allow delete: if actsAs(gid, mid) || isCreator(gid);
+      }
+
+      // passcode hashes: never readable by anyone, only checked by these rules
+      match /pins/{mid} {
+        allow read: if false;
+        allow create, update: if actsAs(gid, mid)
+          && request.resource.data.keys().hasOnly(['hash'])
+          && request.resource.data.hash is string
+          && request.resource.data.hash.matches('^[0-9a-f]{64}$');
+        allow delete: if actsAs(gid, mid) || isCreator(gid);
+      }
+
+      match /links/{lid} {
+        allow get: if signedIn() && lid == request.auth.uid;
+        allow list: if isCreator(gid);
+        // linking (or switching) to a member needs that member's passcode, if they set one
+        // "verified" can only be set by sending the right passcode (or kept for the same member)
+        allow create: if signedIn() && lid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['mid', 'at', 'pin', 'verified'])
+          && isText(request.resource.data.mid, 1, 128)
+          && request.resource.data.at is int
+          && exists(memberPath(gid, request.resource.data.mid))
+          && pinOk(gid, request.resource.data.mid, request.resource.data)
+          && (request.resource.data.get('verified', false) == false
+              || pinGiven(gid, request.resource.data.mid, request.resource.data));
+        allow update: if signedIn() && lid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['mid', 'at', 'pin', 'verified'])
+          && isText(request.resource.data.mid, 1, 128)
+          && request.resource.data.at is int
+          && exists(memberPath(gid, request.resource.data.mid))
+          && (request.resource.data.mid == resource.data.mid || pinOk(gid, request.resource.data.mid, request.resource.data))
+          && (request.resource.data.get('verified', false) == false
+              || pinGiven(gid, request.resource.data.mid, request.resource.data)
+              || (resource.data.get('verified', false) == true && resource.data.mid == request.resource.data.mid));
+        allow delete: if (signedIn() && lid == request.auth.uid) || isCreator(gid);
+      }
+
+      // the one-tap buttons ("📦 荷物届いた" ...), shared by the board
+      match /buttons/{bid} {
+        allow read: if isMember(gid);
+        allow create: if (memberAfter(gid) || isMember(gid)) && validButton(request.resource.data);
+        allow update: if isMember(gid) && validButton(request.resource.data);
+        allow delete: if isMember(gid) || isCreator(gid);
+      }
+
+      // posts: a button press (emoji + text + bid) or a free note (bid "")
+      match /posts/{pid} {
+        allow read: if isMember(gid);
+        allow create: if isMember(gid)
+          && validPost(request.resource.data)
+          && actsAs(gid, request.resource.data.by);
+        allow delete: if actsAs(gid, resource.data.by) || isCreator(gid);
+      }
+
+      // the newest press of each button: must match a real post of that button
+      match /latest/{bid} {
+        allow read: if isMember(gid);
+        allow create, update: if isMember(gid)
+          && request.resource.data.keys().hasOnly(['at', 'by', 'pid'])
+          && isText(request.resource.data.pid, 1, 40)
+          && existsAfter(postPath(gid, request.resource.data.pid))
+          && getAfter(postPath(gid, request.resource.data.pid)).data.bid == bid
+          && getAfter(postPath(gid, request.resource.data.pid)).data.by == request.resource.data.by
+          && getAfter(postPath(gid, request.resource.data.pid)).data.at == request.resource.data.at;
+        allow delete: if isMember(gid) || isCreator(gid);
+      }
+
+      // when each member last opened the board (shown as "見た")
+      match /reads/{mid} {
+        allow read: if isMember(gid);
+        allow create, update: if actsAs(gid, mid) && isMember(gid)
+          && request.resource.data.keys().hasOnly(['at'])
+          && request.resource.data.at is int
+          && request.resource.data.at <= nowMs() + 300000;
+        allow delete: if actsAs(gid, mid) || isCreator(gid);
+      }
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['groups', 'owned'])
+        && request.resource.data.groups is list
+        && request.resource.data.groups.size() <= 30
+        && request.resource.data.get('owned', []) is list
+        && request.resource.data.get('owned', []).size() <= 3;
+    }
+  }
+}

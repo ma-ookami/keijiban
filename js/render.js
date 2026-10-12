@@ -141,15 +141,31 @@ function shownPosts(){
   return Object.values(byId).sort((a, b) => b.at - a.at);
 }
 let delArmed = null, delTimer = null;
+// the board scrolls inside its card, newest on top. Reading further down stays put when new posts arrive;
+// "▲ 新しい書き込み 2件" then appears and takes you back up.
+let jumpTop = false, topAt = 0;
+const scrolledDown = () => $("postScroll").scrollTop > 40;
+// from far down, jump most of the way first so the glide stays short
+function scrollToNewest(smooth){
+  const box = $("postScroll");
+  if (smooth && box.scrollTop > 400) box.scrollTop = 400;
+  box.scrollTo({ top:0, behavior: smooth ? "smooth" : "auto" });
+}
 function renderPosts(){
-  const list = $("postList"), posts = shownPosts();
+  const box = $("postScroll"), list = $("postList"), posts = shownPosts();
   const loading = S.filter == null ? !S.postsReady : S.filterPosts == null;
   const label = S.filter == null ? "" : S.filter === "" ? "ひとこと" : ((S.buttons.find(b => b.id === S.filter) || {}).text || "");
   $("boardTitle").textContent = label ? `「${label}」の記録` : "ボード";
-  if (loading){ list.replaceChildren(h("li", { class:"empty muted", text:"読み込み中…" })); $("moreBtn").hidden = true; return; }
-  if (!posts.length){
-    list.replaceChildren(h("li", { class:"empty muted", text: S.filter == null ? "まだ書き込みはありません。ボタンを押すか、ひとこと書いてみよう" : "まだありません" }));
-    $("moreBtn").hidden = true; return;
+  const done = msg => { list.replaceChildren(h("li", { class:"empty muted", text:msg })); ["moreBtn","endCap","newestCap","toNewest"].forEach(id => $(id).hidden = true); };
+  if (loading) return done("読み込み中…");
+  if (!posts.length) return done(S.filter == null ? "まだ書き込みはありません。ボタンを押すか、ひとこと書いてみよう" : "まだありません");
+
+  // remember which post is at the top of the view, to keep it there after the redraw
+  let anchor = null;
+  if (!jumpTop && scrolledDown()){
+    for (const el of list.querySelectorAll(".post[data-id]")){
+      if (el.offsetTop + el.offsetHeight > box.scrollTop){ anchor = { id:el.dataset.id, off:el.offsetTop - box.scrollTop }; break; }
+    }
   }
   const items = [];
   let lastDay = "";
@@ -159,8 +175,28 @@ function renderPosts(){
     items.push(postItem(p));
   });
   list.replaceChildren(...items);
-  $("moreBtn").hidden = !(S.filter == null && S.hasMore);
+  const more = S.filter == null && S.hasMore;
+  $("moreBtn").hidden = !more;
+  $("endCap").hidden = more || posts.length < 4;
+  $("newestCap").hidden = false;
+  // at once, not gliding: another redraw right after (the button's "last pressed") would keep the half-way position
+  if (jumpTop){ jumpTop = false; scrollToNewest(false); }
+  else if (anchor){
+    const el = list.querySelector(`.post[data-id="${anchor.id}"]`);
+    if (el) box.scrollTop = el.offsetTop - anchor.off;
+  }
+  updateToNewest();
 }
+function updateToNewest(){
+  const posts = shownPosts(), newest = posts.length ? posts[0].at : 0;
+  if (!scrolledDown()){ topAt = newest; $("toNewest").hidden = true; return; }
+  const n = posts.filter(p => p.at > topAt && p.by !== S.me).length;
+  $("toNewest").hidden = false;
+  $("toNewest").classList.toggle("fresh", n > 0);
+  $("toNewest").textContent = n ? `▲ 新しい書き込み ${n}件` : "▲ 最新へ";
+}
+$("postScroll").addEventListener("scroll", () => { if (S.me) updateToNewest(); }, { passive:true });
+$("toNewest").addEventListener("click", () => scrollToNewest(true));
 function postItem(p){
   const mine = p.by === S.me, stamp = !!p.bid || !!p.emoji, fresh = isNew(p);
   const seen = seenBy(p), others = Object.keys(S.members).filter(id => id !== p.by).length;
@@ -170,7 +206,7 @@ function postItem(p){
     seen.length === others && others > 1 ? "みんな見た" : seen.length === 1 ? `${nameOf(seen[0])}が見た` : `${seen.length}人が見た`);
   else if (mine && others) seenNode = h("span", { class:"seen none", text:"まだだれも見ていません" });
   const armed = delArmed === p.id;
-  return h("li", { class:"post" + (stamp ? " stamp" : "") + (mine ? " mine" : "") + (fresh ? " new" : "") },
+  return h("li", { class:"post" + (stamp ? " stamp" : "") + (mine ? " mine" : "") + (fresh ? " new" : ""), "data-id":p.id },
     avatar(p.by, nameOf(p.by)),
     h("div", { class:"p-body" },
       h("div", { class:"p-head" },

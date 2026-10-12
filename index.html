@@ -125,10 +125,17 @@
 
       <div class="col col-board">
         <div class="card board-card">
-          <div class="mhead"><h2 id="boardTitle">ボード</h2><span class="muted small" id="boardInfo"></span></div>
+          <div class="mhead"><div class="mh-l"><h2 id="boardTitle">ボード</h2><span class="order-tag" title="新しい書き込みが上に出ます">▲ 上が新しい</span></div><span class="muted small" id="boardInfo"></span></div>
           <div class="filter" id="filterChips" role="tablist" aria-label="表示する書き込み"></div>
-          <ul class="posts" id="postList" aria-live="polite"></ul>
-          <button type="button" class="btn more" id="moreBtn" hidden>もっと前を見る</button>
+          <div class="posts-wrap">
+            <div class="posts-scroll" id="postScroll" tabindex="0" aria-label="書き込み(上が新しい)">
+              <div class="newest-cap" id="newestCap" hidden>▲ いちばん新しい書き込み</div>
+              <ul class="posts" id="postList" aria-live="polite"></ul>
+              <button type="button" class="btn more" id="moreBtn" hidden>▼ もっと前を見る</button>
+              <p class="end-cap" id="endCap" hidden>ここがいちばん古い書き込みです</p>
+            </div>
+            <button type="button" class="to-new" id="toNewest" hidden>▲ 最新へ</button>
+          </div>
         </div>
       </div>
     </div>
