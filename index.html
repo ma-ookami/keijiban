@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17181c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ケージバン">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="description" content="「届いた」「帰ったよ」をボタンひとつで。書いておけば伝わる、家族・恋人・友達の連絡ボード。">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>ケージバン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo" aria-label="ケージバン"><span class="pin" aria-hidden="true"></span>ケージ<span class="b">バン</span></div>
+    <div class="grp">
+      <button class="grp-btn" id="grpBtn" hidden><span id="grpName"></span></button>
+      <button class="icon-btn" id="shareBtn" hidden aria-label="招待リンクをコピー" title="招待リンクをコピー">🔗</button>
+      <button class="icon-btn" id="setBtn" hidden aria-label="設定" title="設定">⚙</button>
+    </div>
+  </header>
+
+  <section class="screen" id="sLoading">
+    <div class="spin" aria-hidden="true"></div>
+    <p class="muted" style="text-align:center;margin:0">読み込み中…</p>
+    <div id="slowNote" hidden class="notice">読み込みに時間がかかっています。<button class="linkbtn" data-reload>再読み込みする</button></div>
+  </section>
+
+  <section class="screen" id="sError" hidden>
+    <div class="hero"><p class="big" style="font-size:44px">あれ?</p></div>
+    <div class="notice err" id="errMsg"></div>
+    <button class="btn primary" data-reload>再読み込み</button>
+    <button class="linkbtn" id="errHome" hidden>ボードの一覧にもどる</button>
+  </section>
+
+  <section class="screen" id="sHome" hidden>
+    <div class="hero">
+      <p class="home-lead">書いておけば、伝わる。</p>
+      <p class="big home">ケージ<span class="b">バン</span></p>
+      <p>「届いた」「帰ったよ」をボタンひとつで。<br>いちいちメッセージしなくていい、連絡ボード。</p>
+    </div>
+    <ol class="steps" id="homeSteps" hidden>
+      <li><b>1</b>ボードをつくる</li>
+      <li><b>2</b>🔗 で招待リンクを送る</li>
+      <li><b>3</b>「届いた」をポチッ</li>
+    </ol>
+    <div class="card stack" id="myGroupsCard" hidden>
+      <h2>参加中のボード</h2>
+      <ul class="glist" id="myGroups"></ul>
+    </div>
+    <div class="home-actions">
+      <button type="button" class="btn" id="openCreate" aria-expanded="false" aria-controls="createForm">+ ボードをつくる</button>
+      <button type="button" class="btn" id="openPaste" aria-expanded="false" aria-controls="pasteForm">🔗 招待リンクで参加</button>
+    </div>
+    <form class="card stack" id="pasteForm" hidden>
+      <h2>招待リンクで参加</h2>
+      <div class="inline"><input class="input" id="pasteInput" inputmode="url" autocomplete="off" placeholder="招待リンクを貼り付け"><button class="btn">開く</button></div>
+      <p class="hint">LINEなどで受け取ったリンクを貼ってください</p>
+    </form>
+    <form class="card stack" id="createForm" hidden>
+      <div><h2>ボードをつくる</h2><p class="muted" style="margin:4px 0 0">ぜんぶ、あとから設定で変えられます</p></div>
+      <label class="field"><span class="label">ボードの名前</span>
+        <input class="input" id="cName" maxlength="24" placeholder="例:うちの家族" required></label>
+      <label class="field"><span class="label">あなたの名前</span>
+        <input class="input" id="cMe" maxlength="10" placeholder="例:たろう" required autocomplete="nickname"></label>
+      <label class="field"><span class="label">合言葉(数字4桁)</span>
+        <input class="input" id="cPin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required autocomplete="off" placeholder="例:0000 以外の4桁">
+        <span class="hint">機種変更やブラウザが変わったときに、作った本人だと確かめるために使います</span></label>
+      <div class="field">
+        <span class="label">最初のボタン(あとから変えられます)</span>
+        <div class="chips" id="cButtons"></div>
+      </div>
+      <button class="btn primary" id="cSubmit">ボードをつくる</button>
+    </form>
+  </section>
+
+  <section class="screen" id="sJoin" hidden>
+    <div class="hero">
+      <p class="label">ボードに招待されています</p>
+      <p class="big" style="font-size:clamp(30px,9vw,46px)" id="joinGroupName"></p>
+      <p class="by-line" id="joinBy" hidden></p>
+      <p id="joinCount"></p>
+    </div>
+    <div class="card stack" id="claimCard" hidden>
+      <span class="label">前に参加したことがある人は、自分の名前をタップ</span>
+      <div class="chips claim-chips" id="claimChips"></div>
+      <div class="field" id="claimPinRow" hidden>
+        <span class="label">合言葉(数字4桁)</span>
+        <input class="input" id="claimPin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
+      </div>
+      <button type="button" class="btn primary" id="claimBtn" hidden></button>
+      <p class="hint">別のスマホやブラウザで開いたときに使います。前の書き込みもそのまま引き継がれます。</p>
+    </div>
+    <form class="card stack" id="joinForm">
+      <label class="field"><span class="label" id="jLabel">あなたの名前(みんなに表示されます)</span>
+        <input class="input" id="jName" maxlength="10" placeholder="例:たろう" required autocomplete="nickname"></label>
+      <button class="btn primary" id="jSubmit">参加する</button>
+    </form>
+  </section>
+
+  <section class="screen" id="sMain" hidden>
+    <div class="notice" id="roNotice" hidden>いまは書き込めない状態です。ページを再読み込みしてください。</div>
+    <div class="main">
+      <div class="col col-send">
+        <div class="card kb-card">
+          <div class="mhead"><h2>ボタンで伝える</h2><button type="button" class="mini" id="editBtns">✎ ボタンを編集</button></div>
+          <div class="kb-grid" id="btnGrid"></div>
+        </div>
+        <form class="card composer" id="postForm">
+          <label class="label" for="postInput">ひとこと書いておく</label>
+          <textarea class="input" id="postInput" maxlength="200" rows="2" placeholder="例:今日は遅くなります / 冷蔵庫にケーキあるよ"></textarea>
+          <div class="composer-foot"><span class="cnt" id="postCount"></span><button class="btn primary" id="postSubmit" disabled>書く</button></div>
+        </form>
+      </div>
+
+      <div class="col col-board">
+        <div class="card board-card">
+          <div class="mhead"><h2 id="boardTitle">ボード</h2><span class="muted small" id="boardInfo"></span></div>
+          <div class="filter" id="filterChips" role="tablist" aria-label="表示する書き込み"></div>
+          <ul class="posts" id="postList" aria-live="polite"></ul>
+          <button type="button" class="btn more" id="moreBtn" hidden>もっと前を見る</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- settings sheet -->
+<div class="sheet" id="shSet" hidden><div class="panel" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="grab"></div>
+  <div class="sh"><h2 id="setTitle">設定</h2><div class="sh-btns"><button type="button" class="reload-btn" id="reloadBtn" aria-label="最新の状態に読み込み直す" title="最新の状態に読み込み直す"><span class="ri" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></span></button><button class="x" data-close aria-label="閉じる">✕</button></div></div>
+  <div class="set-tabs" id="setTabs" role="tablist" aria-label="設定の種類">
+    <button type="button" role="tab" data-t="me">自分</button>
+    <button type="button" role="tab" data-t="group">ボード</button>
+    <button type="button" role="tab" data-t="other">その他</button>
+    <button type="button" role="tab" data-t="manage" id="manageTab" hidden>管理</button>
+  </div>
+
+  <div class="profile" id="profileHead" data-tab="me" aria-live="polite"></div>
+  <form class="sec box" id="renameForm" data-tab="me">
+    <h3 class="box-h">名前</h3>
+    <div class="inline"><input class="input" id="rName" maxlength="10" required enterkeyhint="done"><button class="btn primary">保存</button></div>
+  </form>
+  <div class="sec box" data-tab="me">
+    <h3 class="box-h">アイコンの色</h3>
+    <div class="swatches" id="colorPick" role="radiogroup" aria-label="アイコンの色"></div>
+  </div>
+  <form class="sec box" id="pinForm" data-tab="me">
+    <h3 class="box-h">合言葉(数字4桁)</h3>
+    <div class="inline"><input class="input" id="pinInput" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="例:0000 以外の4桁" enterkeyhint="done"><button class="btn primary">保存</button></div>
+    <p class="hint" id="pinHint"></p>
+    <button type="button" class="linkbtn" id="pinClear" hidden>合言葉を解除する</button>
+  </form>
+
+  <p class="box-note" data-tab="group">ボードの設定は、メンバーならだれでも変えられます。</p>
+  <div class="sec box" id="btnEditor" data-tab="group">
+    <h3 class="box-h">ボタン</h3>
+    <ul class="be-list" id="beList"></ul>
+    <form class="be-form" id="beForm">
+      <span class="label" id="beFormTitle">ボタンを追加</span>
+      <div class="emoji-pick" id="beEmojis" role="radiogroup" aria-label="絵文字"></div>
+      <div class="inline">
+        <input class="input be-emoji" id="beEmoji" maxlength="8" aria-label="絵文字(ほかの絵文字も入れられます)" autocomplete="off">
+        <input class="input" id="beText" maxlength="16" placeholder="例:荷物届いた" required autocomplete="off" enterkeyhint="done">
+      </div>
+      <div class="be-actions"><button type="button" class="linkbtn" id="beCancel" hidden>やめる</button><button class="btn primary" id="beSave">追加</button></div>
+    </form>
+    <p class="hint" id="beHint"></p>
+  </div>
+  <form class="sec box" id="gNameForm" data-tab="group">
+    <h3 class="box-h">ボードの名前</h3>
+    <div class="inline"><input class="input" id="gNameInput" maxlength="24" required enterkeyhint="done"><button class="btn primary">保存</button></div>
+  </form>
+  <div class="sec box" id="creatorNote" data-tab="group" hidden>
+    <h3 class="box-h">ボードの管理</h3>
+    <p class="hint" id="creatorNoteText"></p>
+    <form class="inline" id="creatorVerifyForm" hidden>
+      <input class="input" id="creatorPin" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="合言葉(数字4桁)" enterkeyhint="done">
+      <button class="btn primary">確認</button>
+    </form>
+  </div>
+
+  <div class="sec box" data-tab="other">
+    <h3 class="box-h">画面の明るさ</h3>
+    <div class="seg three" id="themePick" role="radiogroup" aria-label="画面の明るさ">
+      <button type="button" role="radio" data-t="auto">自動</button>
+      <button type="button" role="radio" data-t="dark">ダーク</button>
+      <button type="button" role="radio" data-t="light">ライト</button>
+    </div>
+    <p class="hint">自動はスマホの設定に合わせます。この端末だけの設定です。</p>
+  </div>
+  <div class="sec box" data-tab="other">
+    <h3 class="box-h">ボード</h3>
+    <button class="btn" id="switchBtn">ほかのボードに切り替える</button>
+    <button type="button" class="btn danger" id="leaveBtn" style="margin-top:6px">このボードを抜ける</button>
+    <p class="hint" id="leaveHint"></p>
+  </div>
+
+  <div class="sec" id="dangerSec" data-tab="manage" hidden>
+    <span class="label">メンバー(作った人だけが外せます)</span>
+    <ul class="mlist" id="memManage"></ul>
+    <p class="hint">同じ人が2人いるときなどに使います。外した人の書き込みも消えます。</p>
+    <div class="danger-zone">
+      <span class="label">危険な操作</span>
+      <button class="btn danger" id="delBtn">このボードを削除する</button>
+      <p class="hint">書き込みもすべて消え、元に戻せません。</p>
+    </div>
+  </div>
+</div></div>
+
+<div class="updating" id="updating" hidden><div class="spin" aria-hidden="true"></div><p>新しい版にしています…</p></div>
+<div class="offline" id="offline" role="status" hidden>接続が切れています。書いた内容は、つながるまで画面を閉じずに待つと保存されます</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="js/base.js"></script>
+<script src="js/data.js"></script>
+<script src="js/render.js"></script>
+<script src="js/events.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>
