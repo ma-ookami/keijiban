@@ -322,6 +322,13 @@ textarea.input{resize:vertical;min-height:64px;line-height:1.5}
 .seg.two{grid-template-columns:repeat(2,1fr)}
 .be-every{flex:none;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 50%,var(--line))}
 /* 毎日・毎週・毎月 stays visible but dimmed until 定期 is chosen */
-.every-seg{transition:opacity .15s}
-.every-seg.off{opacity:.4}
-.every-seg.off button{cursor:not-allowed}
+.repeat{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+.switch-row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:800;font-size:14px;cursor:pointer}
+.switch-row input{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;margin:0;border-radius:999px;background:var(--line);position:relative;cursor:pointer;transition:background .2s}
+.switch-row input::before{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--fg);transition:transform .2s}
+.switch-row input:checked{background:var(--acc)}
+.switch-row input:checked::before{transform:translateX(18px);background:var(--acc-ink)}
+.every-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.every-row button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 0;font-size:13px;font-weight:800;color:var(--muted)}
+.every-row button.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.repeat .hint{margin:-2px 0 0}

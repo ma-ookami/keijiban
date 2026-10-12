@@ -278,13 +278,9 @@ function btnBody(b){
   if (EVERY[b.every]) d.every = b.every;
   return d;
 }
-// なし / 定期, then 毎日・毎週・毎月 (定期 starts from the last interval picked, 毎月 at first)
+// 定期 on/off, then 毎日・毎週・毎月 (turning it on starts from the last interval picked, 毎月 at first)
 let lastEvery = "month";
-$("beRepeat").addEventListener("click", e => {
-  const x = e.target.closest("button[data-r]"); if (!x) return;
-  beEvery = x.dataset.r === "on" ? (beEvery || lastEvery) : "";
-  renderBtnEditor();
-});
+$("beRepeatSw").addEventListener("change", e => { beEvery = e.target.checked ? lastEvery : ""; renderBtnEditor(); });
 $("beEvery").addEventListener("click", e => {
   const x = e.target.closest("button[data-v]"); if (!x || !beEvery) return;
   beEvery = lastEvery = x.dataset.v; renderBtnEditor();

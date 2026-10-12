@@ -323,13 +323,11 @@ function renderBtnEditor(){
   const cur = $("beEmoji").value.trim();
   $("beEmojis").replaceChildren(...EMOJIS.map(e => h("button", { type:"button", role:"radio", class:"em" + (cur === e ? " on" : ""), "aria-checked":String(cur === e),
     onclick:() => { $("beEmoji").value = e; renderBtnEditor(); } }, e)));
-  // なし / 定期; the 毎日・毎週・毎月 row only works once 定期 is chosen
-  $("beRepeat").querySelectorAll("button").forEach(x => { const on = (x.dataset.r === "on") === !!beEvery; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); });
-  $("beEvery").classList.toggle("off", !beEvery);
-  $("beEvery").querySelectorAll("button").forEach(x => { const on = x.dataset.v === beEvery; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); x.disabled = !beEvery; });
-  $("beEveryHint").textContent = beEvery
-    ? `${EVERY[beEvery].now}押されたかどうかが、ボタンに「✓ ${EVERY[beEvery].now}OK」「${EVERY[beEvery].now}まだ」で出ます。` + (beEvery === "week" ? "週は月曜はじまりです。" : "")
-    : "いつ押してもよいボタンです。最後に押した日時が出ます。「定期」にすると、毎日・毎週・毎月から選べます。";
+  // one switch; 毎日・毎週・毎月 shows only when it's on
+  $("beRepeatSw").checked = !!beEvery;
+  $("beEvery").hidden = $("beEveryHint").hidden = !beEvery;
+  $("beEvery").querySelectorAll("button").forEach(x => { const on = x.dataset.v === beEvery; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); });
+  if (beEvery) $("beEveryHint").textContent = `ボタンに「✓ ${EVERY[beEvery].now}OK」「${EVERY[beEvery].now}まだ」が出ます` + (beEvery === "week" ? "(月曜はじまり)" : "");
   const editing = beEdit && S.buttons.find(b => b.id === beEdit);
   $("beFormTitle").textContent = editing ? `「${editing.emoji} ${editing.text}」を変える` : "ボタンを追加";
   $("beSave").textContent = beEdit ? "保存" : "追加";
