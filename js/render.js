@@ -100,19 +100,21 @@ function renderMain(){
   grid.querySelectorAll(".kb").forEach(el => { old[el.dataset.bid] = el; });
   // a repeating button shows this period's state: "✓ 今月OK・10/3 ママ" (green) or "今月まだ" (dashed)
   const tiles = S.buttons.map(b => {
-    const last = S.latest[b.id], today = !!last && dayKey(last.at) === dayKey(Date.now());
+    const last = S.latest[b.id];
     const done = doneThisPeriod(b), due = !!b.every && !done;
     const el = old[b.id] || h("button", { type:"button", class:"kb", "data-bid":b.id },
       h("span", { class:"kb-e", "aria-hidden":"true" }), h("span", { class:"kb-t" }), h("span", { class:"kb-l" }), h("span", { class:"kb-every" }));
-    el.classList.toggle("today", b.every ? done : today);
+    // plain buttons just show emoji + text (who pressed when is on the board);
+    // repeating ones also show this period's state: ✓ 今月OK (green) / 今月まだ (dashed)
+    el.classList.toggle("today", done);
     el.classList.toggle("due", due);
     el.disabled = ro;
     const lastText = last ? `${whenText(last.at)}・${nameOf(last.by)}` : "まだなし";
-    const state = !b.every ? lastText : done ? `✓ ${EVERY[b.every].now}OK・${shortWhen(last.at)} ${nameOf(last.by)}` : `${EVERY[b.every].now}まだ`;
-    el.setAttribute("aria-label", `${b.text}と書く(${b.every ? EVERY[b.every].label + "・" + state : "前回:" + lastText})`);
-    el.title = b.every && last ? `前回:${whenText(last.at)} ${nameOf(last.by)}` : "";
+    const state = !b.every ? "" : `${EVERY[b.every].now}${done ? "OK" : "まだ"}`;
+    el.setAttribute("aria-label", `${b.text}と書く` + (b.every ? `(${EVERY[b.every].label}・${state})` : ""));
+    el.title = last ? `前回:${lastText}` : "";
     const [e, t, l, ev] = el.children;
-    e.textContent = b.emoji || "・"; t.textContent = b.text; l.textContent = state;
+    e.textContent = b.emoji || "・"; t.textContent = b.text; l.textContent = state; l.hidden = !state;
     ev.textContent = b.every ? EVERY[b.every].label : ""; ev.hidden = !b.every;
     return el;
   });

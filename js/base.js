@@ -66,8 +66,6 @@ function periodStart(every, now = Date.now()){
 }
 // a repeating button: pressed in this period already?
 const doneThisPeriod = b => !!b.every && !!S.latest[b.id] && S.latest[b.id].at >= periodStart(b.every);
-// "14:03" today, "10/3" otherwise
-const shortWhen = t => dayKey(t) === dayKey(Date.now()) ? clock(t) : `${new Date(t).getMonth() + 1}/${new Date(t).getDate()}`;
 
 // "14:03" today, "昨日 14:03", otherwise "3日前"
 function whenText(t){
