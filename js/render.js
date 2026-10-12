@@ -212,12 +212,6 @@ $("postScroll").addEventListener("scroll", () => { if (S.me) updateToNewest(); }
 $("toNewest").addEventListener("click", () => scrollToNewest(true));
 function postItem(p){
   const mine = p.by === S.me, stamp = !!p.bid || !!p.emoji, fresh = isNew(p);
-  const seen = seenBy(p), others = Object.keys(S.members).filter(id => id !== p.by).length;
-  let seenNode = null;
-  if (seen.length) seenNode = h("span", { class:"seen", title:"見た人:" + seen.map(nameOf).join("・") },
-    h("span", { class:"avs" }, seen.slice(0, 5).map(id => avatar(id, nameOf(id), "xs"))),
-    seen.length === others && others > 1 ? "みんな見た" : seen.length === 1 ? `${nameOf(seen[0])}が見た` : `${seen.length}人が見た`);
-  else if (mine && others) seenNode = h("span", { class:"seen none", text:"まだだれも見ていません" });
   const armed = delArmed === p.id;
   // reactions: only on other people's posts, shown as a small badge on the bottom-right corner
   const canReact = !mine && S.canWrite !== false;
@@ -231,10 +225,10 @@ function postItem(p){
         h("b", { text:nameOf(p.by) }),
         h("time", { datetime:new Date(p.at).toISOString(), title:new Date(p.at).toLocaleString("ja-JP"), text:clock(p.at) }),
         fresh ? h("span", { class:"new-tag", text:"NEW" }) : null,
-        mine && S.canWrite !== false ? h("button", { type:"button", class:"p-del" + (armed ? " armed" : ""), onclick:() => deletePost(p) }, armed ? "本当に消す" : "消す") : null),
+        mine && S.canWrite !== false ? h("button", { type:"button", class:"p-del" + (armed ? " armed" : ""), onclick:() => deletePost(p) }, armed ? "本当に消す" : "消す") : null,
+        reactBtn),
       stamp ? h("div", { class:"p-stamp" }, p.emoji ? h("span", { class:"e", "aria-hidden":"true", text:p.emoji }) : null, h("span", { text:p.text }))
-            : h("p", { class:"p-text" }, linkify(p.text)),
-      seenNode || reactBtn ? h("div", { class:"p-foot" }, seenNode || h("span"), reactBtn) : null),
+            : h("p", { class:"p-text" }, linkify(p.text))),
     badge);
 }
 // "👍2 ❤️" — grouped by emoji, mine highlighted; who reacted is in the title (and in a toast on tap)

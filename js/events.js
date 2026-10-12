@@ -167,7 +167,8 @@ function bounce(el){
   el.classList.remove("boing"); void el.offsetWidth; el.classList.add("boing");
 }
 function updateComposer(){
-  const v = $("postInput").value, n = chars(v);
+  const box = $("postInput"), v = box.value, n = chars(v);
+  box.style.height = "auto"; box.style.height = Math.min(box.scrollHeight + 2, 140) + "px";
   $("postSubmit").disabled = S.canWrite === false || !v.trim();
   $("postCount").textContent = n ? `${n}/${POST_MAX}` : "";
   $("postCount").classList.toggle("full", n >= POST_MAX);

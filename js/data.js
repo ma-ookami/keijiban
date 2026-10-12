@@ -102,7 +102,7 @@ function watchPosts(){
 function loadMore(){ S.limit += PAGE; watchPosts(); }
 
 // ---------- read marks ----------
-// reads/<member> = when that member last opened the board. A post counts as seen by everyone whose mark is later.
+// reads/<member> = when that member last opened the board; posts after my previous mark are "NEW".
 let markedFor = "";
 function markRead(){
   if (!S.me || !S.readsReady || !S.postsLive) return;
@@ -124,11 +124,6 @@ function markRead(){
   }
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.me) markRead(); });
-// members other than the writer who have opened the board since the post
-function seenBy(p){
-  return Object.keys(S.members).filter(id => id !== p.by && (S.reads[id] || 0) >= p.at)
-    .sort((a, b) => S.members[a].joinedAt - S.members[b].joinedAt);
-}
 const isNew = p => S.prevRead != null && S.prevRead > 0 && p.by !== S.me && p.at > S.prevRead;
 
 // ---------- my boards ----------

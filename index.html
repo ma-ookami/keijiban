@@ -119,8 +119,11 @@
         </div>
         <form class="card composer" id="postForm">
           <label class="label" for="postInput">ひとこと書いておく</label>
-          <textarea class="input" id="postInput" maxlength="200" rows="2" placeholder="例:今日は遅くなります / 冷蔵庫にケーキあるよ"></textarea>
-          <div class="composer-foot"><span class="cnt" id="postCount"></span><button class="btn primary" id="postSubmit" disabled>書く</button></div>
+          <div class="composer-row">
+            <textarea class="input" id="postInput" maxlength="200" rows="1" placeholder="例:今日は遅くなります"></textarea>
+            <button class="btn primary" id="postSubmit" disabled>書く</button>
+          </div>
+          <span class="cnt" id="postCount"></span>
         </form>
       </div>
 
